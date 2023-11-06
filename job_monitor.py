@@ -323,6 +323,7 @@ There are two modes to run your jobs:
       e.g.:
         job_monitor.py -p cpu -m  100g -c 10 work.sh
         job_monitor.py -p fat -m 200g -c 20 -t 200 work.sh [work1.sh work2.sh ]
+
     2. run [SEQUENTIAL] jobs by separating jobs with ",", previous one done and then the following going forward.
        [NOTE]: when you use this mode, you must make sure "#SBATCH "parameters in head of each scrpt,
        while '-c', '-m', and '-p' will become useless.
