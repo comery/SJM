@@ -8,6 +8,11 @@ import os
 import argparse
 #from icecream import ic
 
+def print_time():
+    named_tuple = time.localtime() # get struct_time
+    time_string = time.strftime("%m/%d/%Y, %H:%M:%S", named_tuple)
+    return time_string
+
 def match_pattern(text):
     pattern = r'\d+[gGmMkK]+'
     matches = re.findall(pattern, text)
@@ -191,12 +196,15 @@ def monitor_job_status(jobs, interval=60, give_up_check_round=100, log=None):
     submit_error_list = set()
     check_error_list = set()
     state_error_list = set()
-    checking_list = total_job_set - complete_list - check_error_list - state_error_list
+    #checking_list = total_job_set - complete_list - check_error_list - state_error_list
+    checking_list = total_job_set # init
     check_round = 0
     checked_times = {}  # record how many times checked for each job;
     job_status = ''
+    print("----------------------------------------------------------", file=log)
     while checking_list:
-        # when len(complete_list) + len(state_error_list) + len(check_error_list) == total_job, stop regually checking
+        #ic(checking_list)
+        # when checking_list = None, stop regually checking
         # Run the sacct command to check the status of the job
         for job in checking_list:
             command = f" /usr/bin/sacct -o State -j {job} | tail -n 3 | head -n 1 "
@@ -210,16 +218,18 @@ def monitor_job_status(jobs, interval=60, give_up_check_round=100, log=None):
                 # check this job many times in case system may not response immediately
                 CHECK_THIS_JOB_TIME_USAGE = 0
                 TIME_EXHAUST = 30
-                while job_status or CHECK_THIS_JOB_TIME_USAGE > TIME_EXHAUST:
+                while len(job_status) == 0:  #check until job_status is not empty
                     # Get the job status from the output
                     job_status = parse_job_STATE(result.stdout)
-                    print(job_status)
+                    if job_status or CHECK_THIS_JOB_TIME_USAGE > TIME_EXHAUST:
+                        break
                     CHECK_THIS_JOB_TIME_USAGE += 5
             else:
                 job_status = parse_job_STATE(result.stdout)
 
             # Print the job status
-            print(f"[INFO]: Job ID {job} status: {job_status} in Round {check_round}", file=log)
+            current_time = print_time()
+            print(f"[INFO {current_time}]: Job ID {job} status: {job_status} in Round {check_round}", file=log)
 
             # Check if the job has completed
             if job_status == "COMPLETED":
@@ -252,7 +262,8 @@ def monitor_job_status(jobs, interval=60, give_up_check_round=100, log=None):
         log.flush()  # relese cache
 
     if len(complete_list) == total_job:
-        print("[INFO]: All job completed!", file=log)
+        current_time = print_time()
+        print("[INFO {current_time}]: All job completed!", file=log)
         return 0
     elif len(submit_error_list) > 0:
         print(f"[ERROR]: Some jobs can not be submitted by sbatch:", file=log)
@@ -276,33 +287,22 @@ def submit_and_monitor_sequential_jobs(scripts, read_parameters_from_script=True
                                        give_up_check_round=100, log=None):
     job_index = 0
     job_container = {}
-    job_finished = {}
+    job_finished = {0: 0}
     last_job_finished = 1 # assume the last job not finished
     for src in scripts:
         job_index += 1
         job_container[job_index] = src
-        if job_index > 1:
-            # from the second job, you need check the last job whether finished.
-            if job_finished[job_index-1] != 0:
-                sys.exit(f"The last job {job_container[job_index-1]} has not finished, check it out")
-            else:
-                print(f"The last job {job_container[job_index-1]} has finished, now run the next one")
-                # Submit jobs to the batch system and return job IDs, jobs is a dict, key=jobID, value=script
-                jobs = submit_jobs([src], read_parameters_from_script=True, lines=lines,
-                                   partition_code=partition_code, mem=mem,
-                                   cpus_per_task=cpus_per_task, log=log)
-
-                # 0 is OK, 1 is not OK
-                current_job_finished = monitor_job_status(jobs, interval=check_interval,
-                                                  give_up_check_round=give_up_check_round,log=log)
-                job_finished[job_index] = current_job_finished
+        # from the second job, you need check the last job whether finished.
+        if job_finished[job_index-1] != 0:
+            sys.exit(f"The last job {job_container[job_index-1]} has not finished, check it out")
         else:
-            # the first job
+            print(f"The last job {job_container[job_index-1]} has finished, now run the next one")
+            # Submit jobs to the batch system and return job IDs, jobs is a dict, key=jobID, value=script
             jobs = submit_jobs([src], read_parameters_from_script=True, lines=lines,
-                               partition_code=partition_code, mem=mem,
-                               cpus_per_task=cpus_per_task, log=log)
+                                partition_code=partition_code, mem=mem,
+                                cpus_per_task=cpus_per_task, log=log)
 
-            # Monitor the job status with a 60-second interval
+            # 0 is OK, 1 is not OK
             current_job_finished = monitor_job_status(jobs, interval=check_interval,
                                                       give_up_check_round=give_up_check_round,log=log)
             job_finished[job_index] = current_job_finished
@@ -323,7 +323,6 @@ There are two modes to run your jobs:
       e.g.:
         job_monitor.py -p cpu -m  100g -c 10 work.sh
         job_monitor.py -p fat -m 200g -c 20 -t 200 work.sh [work1.sh work2.sh ]
-
     2. run [SEQUENTIAL] jobs by separating jobs with ",", previous one done and then the following going forward.
        [NOTE]: when you use this mode, you must make sure "#SBATCH "parameters in head of each scrpt,
        while '-c', '-m', and '-p' will become useless.
@@ -386,6 +385,8 @@ yangchentao at genomics.cn
     error = 1
     if run_mode == 'independent':
         # info
+        current_time = print_time()
+        print(f"[START]: {current_time}", file=log)
         print(f"[INFO]: memory usage: {args.mem}", file=log)
         print(f"[INFO]: cpus-per-task {args.cpus_per_task}", file=log)
         print(f"[INFO]: partition for submit {args.partition_code}", file=log)
@@ -404,11 +405,14 @@ yangchentao at genomics.cn
 
         # the final summary
         print(f"[SUMMARY]-s: =================================================", file=log)
+        current_time = print_time()
         if error == 0:
-            print(f"[INFO]: All done for {jobs}", file=log)
+            print(f"[INFO {current_time}]: All done for {jobs}", file=log)
         else:
-            print(f"[INFO]: Some jobs are not finished or with error", file=log)
+            print(f"[INFO {current_time}]: Some jobs are not finished or with error", file=log)
         print(f"[SUMMARY]-e: =================================================", file=log)
+        current_time = print_time()
+        print(f"[END]: {current_time}", file=log)
 
     elif run_mode == 'sequential':
             error = submit_and_monitor_sequential_jobs(args.scripts,
