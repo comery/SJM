@@ -6,7 +6,7 @@ import sys
 import re
 import os
 import argparse
-#from icecream import ic
+from icecream import ic
 
 def print_time():
     named_tuple = time.localtime() # get struct_time
@@ -38,8 +38,8 @@ def parse_job_STATE(text):
     RUNNING
     RUNNING
     """
-    if len(out_liens) > 2:
-        return out_liens[2] # the third line
+    if len(out_lines) > 2:
+        return out_lines[2].strip() # the third line
     else:
         """ case #3
         State
@@ -54,6 +54,7 @@ def update_check_result(thedict, job, state, count):
         thedict.update({job: {state: count}})
 
 def whether_give_up(checked_times, job, sign, give_up_check_round):
+    # sign = ['state_error', 'check_error']
     if job in checked_times:
         if sign in checked_times[job]:
             if checked_times[job][sign] > give_up_check_round:
@@ -157,7 +158,7 @@ def generate_tasks(scripts, lines=0):
         return subscript_dir, script_file_basename_list
 
 def submit_jobs(scripts, read_parameters_from_script=False,
-                lines=0, partition_code="cpu", mem="1g",
+                lines=0, partition_code="cpu", mem="10g",
                 cpus_per_task=1, log=None):
     jobs = {}
     submit_errors = []
@@ -231,18 +232,13 @@ def monitor_job_status(jobs, interval=60, give_up_check_round=20, log=None):
                 print("[ERROR]: An error occurred while running the squeue command: {command}", result.stderr, file=log)
                 submit_error_list.add(job)
                 continue
+            job_status = parse_job_STATE(result.stdout)
+            ic(job_status)
 
-            if check_round == 0:
+            # if you get None and this is the first time to try to get job state, then hold 30s and try again
+            if job_status == None and check_round == 0:
                 # check this job many times in case system may not response immediately
-                CHECK_THIS_JOB_TIME_USAGE = 0
-                TIME_EXHAUST = 30
-                while len(job_status) == 0:  #check until job_status is not empty
-                    # Get the job status from the output
-                    job_status = parse_job_STATE(result.stdout)
-                    if job_status or CHECK_THIS_JOB_TIME_USAGE > TIME_EXHAUST:
-                        break
-                    CHECK_THIS_JOB_TIME_USAGE += 5
-            else:
+                time.sleep(30)
                 job_status = parse_job_STATE(result.stdout)
 
             # Print the job status
@@ -256,25 +252,29 @@ def monitor_job_status(jobs, interval=60, give_up_check_round=20, log=None):
                 1  # do nothing
             elif job_status == None:
                 update_check_result(checked_times, job, 'check_error', check_round)
-            else:
-                # read more -> https://slurm.schedmd.com/squeue.html
-                # ['BOOT_FAIL', 'CANCELLED', 'CONFIGURING', 'DEADLINE', 'FAILED', 'NODE_FAIL'， ‘OUT_OF_MEMORY’， ‘PREEMPTED’， ‘RESV_DEL_HOLD’
-                # ‘REQUEUE_FED’， ‘REQUEUE_HOLD’， ‘REQUEUED’， ‘RESIZING’， ‘REVOKED’， ‘SIGNALING’， ‘SPECIAL_EXIT’， ‘STAGE_OUT’，‘STOPPED’， ‘SUSPENDED’
-                # ‘TIMEOUT’ ]
-                # this list is temporary, you need to update it untill all fixed
+            elif job_status in ['BOOT_FAIL', 'CANCELLED', 'FAILED', 'NODE_FAIL', 'TIMEOUT','OUT_OF_MEMORY']:
+                print(f"[ERROR]: This job {job} is failed because of {job_status} in Round {check_round}", file=log)
                 state_error_list.add(job)
-                print(f"[WARNING]: the satus of job {job} is error code in {check_round}, so give up checking for later", file=log)
-            # if after xxx rounds checking, this job'status is still error, I will give up checking
-            if whether_give_up(checked_times, job, 'check_error', give_up_check_round) == True:
-                check_error_list.add(job)
-                print(f"[WARNING]: this job {job} is still with error after {give_up_check_round}, so give up checking", file=log)
+            else:
+                ic(job_status)
+                # read more -> https://slurm.schedmd.com/squeue.html
+                # ['CONFIGURING', 'DEADLINE', 'PREEMPTED’， ‘RESV_DEL_HOLD’
+                # ‘REQUEUE_FED’， ‘REQUEUE_HOLD’， ‘REQUEUED’， ‘RESIZING’， \
+                # ‘REVOKED’， ‘SIGNALING’， ‘SPECIAL_EXIT’， ‘STAGE_OUT’，‘STOPPED’， ‘SUSPENDED’]
+                # It seems checking state is not ok, just record it, not reject in this round
+                update_check_result(checked_times, job, 'check_error', check_round)
+            # if after {give_up_check_round} rounds checking, this job'status is still error, I will give up checking
+            if check_round > give_up_check_round:
+                if whether_give_up(checked_times, job, 'check_error', give_up_check_round) == True:
+                    check_error_list.add(job)
+                    print(f"[WARNING]: This job {job} is still with error after {give_up_check_round}, so give up checking", file=log)
 
             checking_list = total_job_set - complete_list - check_error_list - state_error_list - submit_error_list
 
         # Sleep for the specified interval before checking again
         time.sleep(interval)
         check_round += 1
-        log.flush()  # relese cache
+        log.flush()  # relese cache, update log file
 
     if len(complete_list) == total_job:
         current_time = print_time()
@@ -302,7 +302,7 @@ def submit_and_monitor_sequential_jobs(scripts, read_parameters_from_script=True
                                        give_up_check_round=20, log=None):
     job_index = 0
     job_container = {}
-    job_finished = {0: 0}
+    job_finished = {0: 0} # artifical setting for the first job
     last_job_finished = 1 # assume the last job not finished
     for src in scripts:
         job_index += 1
@@ -336,14 +336,14 @@ There are two modes to run your jobs:
     1. run [INDEPENDENT] jobs by separating jobs with ' ', all jobs will be submitted in the same time.
 
       e.g.:
-        job_monitor.py -p cpu -m  100g -c 10 work.sh
-        job_monitor.py -p fat -m 200g -c 20 -t 200 work.sh [work1.sh work2.sh ]
+        SJM -p cpu -m  100g -c 10 work.sh
+        SJM -p fat -m 200g -c 20 -t 200 work.sh [work1.sh work2.sh ]
     2. run [SEQUENTIAL] jobs by separating jobs with ",", previous one done and then the following going forward.
        [NOTE]: when you use this mode, you must make sure "#SBATCH "parameters in head of each scrpt,
        while '-c', '-m', and '-p' will become useless.
 
       e.g.:
-        job_monitor.py -t 100 step1.sh,step2.sh[,step3.sh]
+        SJM -t 100 step1.sh,step2.sh[,step3.sh]
 
 Author:
 yangchentao at genomics.cn
@@ -391,10 +391,11 @@ yangchentao at genomics.cn
     else:
         run_mode = 'independent'
     # if only one script, log file is named by script subfixed with ".log"; if not, using JOBmonitor.{pid}
+    date = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
     if len(args.scripts) == 1:
-        log_file = args.scripts[0] + ".log"
+        log_file = args.scripts[0] + f".{date}.log"
     else:
-        log_file = f"JOBmonitor.{pid}.txt"
+        log_file = f"JOBmonitor.{date}.txt"
 
     log = open(log_file, 'w')
     error = 1

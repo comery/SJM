@@ -1,0 +1,36 @@
+[START]: 12/26/2023, 18:27:54
+[INFO]: memory usage: 10g
+[INFO]: cpus-per-task 1
+[INFO]: partition for submit cpu
+[INFO]: regularly checking time interval 20s
+----------------------------------------------------------
+[JOBS]: 1550406 => test1.sh
+[JOBS]: 1550407 => test2.sh
+----------------------------------------------------------
+[INFO 12/26/2023, 18:28:24]: Job ID 1550406 status: None in Round 0
+[INFO 12/26/2023, 18:28:24]: Job ID 1550407 status: RUNNING in Round 0
+[INFO 12/26/2023, 18:28:45]: Job ID 1550406 status: RUNNING in Round 1
+[INFO 12/26/2023, 18:28:45]: Job ID 1550407 status: RUNNING in Round 1
+[INFO 12/26/2023, 18:29:05]: Job ID 1550406 status: RUNNING in Round 2
+[INFO 12/26/2023, 18:29:05]: Job ID 1550407 status: RUNNING in Round 2
+[INFO 12/26/2023, 18:29:25]: Job ID 1550406 status: RUNNING in Round 3
+[INFO 12/26/2023, 18:29:25]: Job ID 1550407 status: RUNNING in Round 3
+[INFO 12/26/2023, 18:29:45]: Job ID 1550406 status: RUNNING in Round 4
+[INFO 12/26/2023, 18:29:45]: Job ID 1550407 status: RUNNING in Round 4
+[INFO 12/26/2023, 18:30:05]: Job ID 1550406 status: RUNNING in Round 5
+[INFO 12/26/2023, 18:30:06]: Job ID 1550407 status: RUNNING in Round 5
+[INFO 12/26/2023, 18:30:26]: Job ID 1550406 status: RUNNING in Round 6
+[INFO 12/26/2023, 18:30:26]: Job ID 1550407 status: RUNNING in Round 6
+[INFO 12/26/2023, 18:30:46]: Job ID 1550406 status: RUNNING in Round 7
+[INFO 12/26/2023, 18:30:46]: Job ID 1550407 status: RUNNING in Round 7
+[INFO 12/26/2023, 18:31:06]: Job ID 1550406 status: RUNNING in Round 8
+[INFO 12/26/2023, 18:31:06]: Job ID 1550407 status: RUNNING in Round 8
+[INFO 12/26/2023, 18:31:26]: Job ID 1550406 status: FAILED in Round 9
+[ERROR]: this job 1550406 is failed because of FAILED in Round 9
+[INFO 12/26/2023, 18:31:26]: Job ID 1550407 status: COMPLETED in Round 9
+[ERROR]: Some jobs maybe failed according to job STATE:
+ 1550406	test1.sh
+[SUMMARY]-s: =================================================
+[INFO 12/26/2023, 18:31:46]: Some jobs are not finished or with error
+[SUMMARY]-e: =================================================
+[END]: 12/26/2023, 18:31:46
