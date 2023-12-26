@@ -1,12 +1,14 @@
 # SJM
-slurm job monitoring script
+Python script for slurm job monitoring
+
+no other package needed, of course, you are using slurm system with sbatch/sacct tools.
 
 
 
 ### Usage
 
 ```text
-usage: job_monitor.py [-h] [-p {cpu,fat}] [-m MEM] [-c CPUS_PER_TASK] [-t CHECK_INTERVAL] [-l LINES_PER_TASK] [-gr GIVE_UP_CHECK_ROUND]
+usage: SJM [-h] [-p {cpu,fat}] [-m MEM] [-c CPUS_PER_TASK] [-t CHECK_INTERVAL] [-l LINES_PER_TASK] [-gr GIVE_UP_CHECK_ROUND]
                       script [script ...]
 
 To use qsub command more efficiently.
@@ -26,7 +28,7 @@ optional arguments:
   -l LINES_PER_TASK, --lines LINES_PER_TASK
                         split shell scripts by INT lines, default=0, if l==0, do nothing
   -gr GIVE_UP_CHECK_ROUND, --give_up_check_round GIVE_UP_CHECK_ROUND
-                        if job still None or Error, it will give up to check your jobs, default=100
+                        if job still None or Error, it will give up to check your jobs, default=20
 
 There are two modes to run your jobs:
     1. run [INDEPENDENT] jobs by separating jobs with ' ', all jobs will be submitted in the same time.
