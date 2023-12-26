@@ -24,10 +24,28 @@ def parse_submit_info_get_jobIDs(text):
 
 def parse_job_STATE(text):
     text = text.strip()
-    if text == '----------' or text == '':
-        return None
+    out_lines = text.strip().split("\n")
+    """ case #1
+    State
+    ----------
+    PENDING
+    """
+
+    """ case #2
+    State
+    ----------
+    RUNNING
+    RUNNING
+    RUNNING
+    """
+    if len(out_liens) > 2:
+        return out_liens[2] # the third line
     else:
-        return text
+        """ case #3
+        State
+        ----------
+        """
+        return None
 
 def update_check_result(thedict, job, state, count):
     if job in thedict:
@@ -143,7 +161,7 @@ def submit_jobs(scripts, read_parameters_from_script=False,
                 cpus_per_task=1, log=None):
     jobs = {}
     submit_errors = []
-    cmd = "/usr/bin/sbatch "
+    cmd = "sbatch "
     if read_parameters_from_script == False:
         if match_pattern(mem):
             cmd  = cmd + f" --mem={mem} "
@@ -168,7 +186,7 @@ def submit_jobs(scripts, read_parameters_from_script=False,
                 partition = submit_parameters["partition"]
                 cpus = submit_parameters["cpus"]
 
-            cmd = f"/usr/bin/sbatch "
+            cmd = f"sbatch "
 
         # Submit jobs to the batch system
         sbatch_command = f"{cmd} -o {script}.o  -e {script}.e {script}"
@@ -187,7 +205,7 @@ def submit_jobs(scripts, read_parameters_from_script=False,
         print(f"[ERROR]: Some scripts are failed in submitting process: {submit_errors}", file=log)
     return jobs
 
-def monitor_job_status(jobs, interval=60, give_up_check_round=100, log=None):
+def monitor_job_status(jobs, interval=60, give_up_check_round=20, log=None):
     jobIDs = jobs.keys()
     total_job = len(jobIDs)
     total_job_set = set(jobs.keys())
@@ -207,7 +225,7 @@ def monitor_job_status(jobs, interval=60, give_up_check_round=100, log=None):
         # when checking_list = None, stop regually checking
         # Run the sacct command to check the status of the job
         for job in checking_list:
-            command = f" /usr/bin/sacct -o State -j {job} | tail -n 3 | head -n 1 "
+            command = f"sacct -o State -j {job} "
             result = subprocess.run(command, shell=True, capture_output=True, text=True)
             if result.stderr:
                 print("[ERROR]: An error occurred while running the squeue command: {command}", result.stderr, file=log)
@@ -244,15 +262,12 @@ def monitor_job_status(jobs, interval=60, give_up_check_round=100, log=None):
                 # ‘REQUEUE_FED’， ‘REQUEUE_HOLD’， ‘REQUEUED’， ‘RESIZING’， ‘REVOKED’， ‘SIGNALING’， ‘SPECIAL_EXIT’， ‘STAGE_OUT’，‘STOPPED’， ‘SUSPENDED’
                 # ‘TIMEOUT’ ]
                 # this list is temporary, you need to update it untill all fixed
-                update_check_result(checked_times, job, 'state_error', check_round)
+                state_error_list.add(job)
+                print(f"[WARNING]: the satus of job {job} is error code in {check_round}, so give up checking for later", file=log)
             # if after xxx rounds checking, this job'status is still error, I will give up checking
             if whether_give_up(checked_times, job, 'check_error', give_up_check_round) == True:
                 check_error_list.add(job)
                 print(f"[WARNING]: this job {job} is still with error after {give_up_check_round}, so give up checking", file=log)
-            if whether_give_up(checked_times, job, 'state_error', give_up_check_round) == True:
-                state_error_list.add(job)
-                print(f"[WARNING]: this job {job} is still with error after {give_up_check_round}, so give up checking", file=log)
-
 
             checking_list = total_job_set - complete_list - check_error_list - state_error_list - submit_error_list
 
@@ -284,7 +299,7 @@ def monitor_job_status(jobs, interval=60, give_up_check_round=100, log=None):
 
 def submit_and_monitor_sequential_jobs(scripts, read_parameters_from_script=True, lines=0, partition_code=None,
                                        mem=None, cpus_per_task=None, check_interval=60,
-                                       give_up_check_round=100, log=None):
+                                       give_up_check_round=20, log=None):
     job_index = 0
     job_container = {}
     job_finished = {0: 0}
@@ -357,8 +372,8 @@ yangchentao at genomics.cn
     parser.add_argument("-l", "--lines", default=0, type=int, dest="lines_per_task",
                         help="split shell scripts by INT lines, default=0, if l==0, do nothing")
 
-    parser.add_argument("-gr", "--give_up_check_round", default=100, type=int, dest="give_up_check_round",
-                        help="if job still None or Error, it will give up to check your jobs, default=100")
+    parser.add_argument("-gr", "--give_up_check_round", default=20, type=int, dest="give_up_check_round",
+                        help="if job still None or Error, it will give up to check your jobs, default=20")
 
     if len(sys.argv) == 1:
         parser.print_help()
