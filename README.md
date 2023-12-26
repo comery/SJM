@@ -34,14 +34,14 @@ There are two modes to run your jobs:
     1. run [INDEPENDENT] jobs by separating jobs with ' ', all jobs will be submitted in the same time.
 
       e.g.:
-        job_monitor.py -p cpu -m  100g -c 10 work.sh
-        job_monitor.py -p fat -m 200g -c 20 -t 200 work.sh [work1.sh work2.sh ]
+        SJM -p cpu -m  100g -c 10 work.sh
+        SJM -p fat -m 200g -c 20 -t 200 work.sh [work1.sh work2.sh ]
     2. run [SEQUENTIAL] jobs by separating jobs with ",", previous one done and then the following going forward.
        [NOTE]: when you use this mode, you must make sure "#SBATCH "parameters in head of each scrpt,
        while '-c', '-m', and '-p' will become useless.
 
       e.g.:
-        job_monitor.py -t 100 step1.sh,step2.sh[,step3.sh]
+        SJM -t 100 step1.sh,step2.sh[,step3.sh]
 
 Author:
 yangchentao at genomics.cn
