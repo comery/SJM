@@ -6,7 +6,7 @@ import sys
 import re
 import os
 import argparse
-from icecream import ic
+#from icecream import ic
 
 def print_time():
     named_tuple = time.localtime() # get struct_time
@@ -93,6 +93,7 @@ def check_script_runnable(src):
 def check_script_header(src):
     with open(src, 'r') as fh:
         text = fh.read()
+        print(text)
     if text.startswith("#!/bin/bash") or text.startswith("#!/bin/sh"):
         return True
     else:
@@ -233,7 +234,6 @@ def monitor_job_status(jobs, interval=60, give_up_check_round=20, log=None):
                 submit_error_list.add(job)
                 continue
             job_status = parse_job_STATE(result.stdout)
-            ic(job_status)
 
             # if you get None and this is the first time to try to get job state, then hold 30s and try again
             if job_status == None and check_round == 0:
@@ -256,7 +256,6 @@ def monitor_job_status(jobs, interval=60, give_up_check_round=20, log=None):
                 print(f"[ERROR]: This job {job} is failed because of {job_status} in Round {check_round}", file=log)
                 state_error_list.add(job)
             else:
-                ic(job_status)
                 # read more -> https://slurm.schedmd.com/squeue.html
                 # ['CONFIGURING', 'DEADLINE', 'PREEMPTED’， ‘RESV_DEL_HOLD’
                 # ‘REQUEUE_FED’， ‘REQUEUE_HOLD’， ‘REQUEUED’， ‘RESIZING’， \
@@ -404,9 +403,9 @@ yangchentao at genomics.cn
         current_time = print_time()
         print(f"[START]: {current_time}", file=log)
         print(f"[INFO]: memory usage: {args.mem}", file=log)
-        print(f"[INFO]: cpus-per-task {args.cpus_per_task}", file=log)
-        print(f"[INFO]: partition for submit {args.partition_code}", file=log)
-        print(f"[INFO]: regularly checking time interval {args.check_interval}s", file=log)
+        print(f"[INFO]: cpus-per-task: {args.cpus_per_task}", file=log)
+        print(f"[INFO]: partition for submit: {args.partition_code}", file=log)
+        print(f"[INFO]: regularly checking time interval: {args.check_interval}s", file=log)
         print("----------------------------------------------------------", file=log)
         # Submit jobs to the batch system and return job IDs, jobs is a dict, key=jobID, value=script
         jobs = submit_jobs(args.scripts, lines=args.lines_per_task,
