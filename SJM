@@ -93,7 +93,6 @@ def check_script_runnable(src):
 def check_script_header(src):
     with open(src, 'r') as fh:
         text = fh.read()
-        print(text)
     if text.startswith("#!/bin/bash") or text.startswith("#!/bin/sh"):
         return True
     else:
@@ -192,6 +191,7 @@ def submit_jobs(scripts, read_parameters_from_script=False,
 
         # Submit jobs to the batch system
         sbatch_command = f"{cmd} -o {script}.o  -e {script}.e {script}"
+        print(f"[PARAMETERS]: {script}: [mem: {mem}, partition: {partition}, cpus: {cpus}]", file=log)
         #process = subprocess.Popen(sbatch_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         #output, error = process.communicate()
         result = subprocess.run(sbatch_command, shell=True, capture_output=True, text=True)
@@ -371,6 +371,9 @@ yangchentao at genomics.cn
     parser.add_argument("-l", "--lines", default=0, type=int, dest="lines_per_task",
                         help="split shell scripts by INT lines, default=0, if l==0, do nothing")
 
+    parser.add_argument("-rps", "--read_parameters_from_script", action='store_const',
+                        help='whether to read sbatch parameters from scripts', const=True, default=False)
+
     parser.add_argument("-gr", "--give_up_check_round", default=20, type=int, dest="give_up_check_round",
                         help="if job still None or Error, it will give up to check your jobs, default=20")
 
@@ -402,15 +405,18 @@ yangchentao at genomics.cn
         # info
         current_time = print_time()
         print(f"[START]: {current_time}", file=log)
-        print(f"[INFO]: memory usage: {args.mem}", file=log)
-        print(f"[INFO]: cpus-per-task: {args.cpus_per_task}", file=log)
-        print(f"[INFO]: partition for submit: {args.partition_code}", file=log)
         print(f"[INFO]: regularly checking time interval: {args.check_interval}s", file=log)
+        if args.read_parameters_from_script == False:
+            print(f"[INFO]: memory usage: {args.mem}", file=log)
+            print(f"[INFO]: cpus-per-task: {args.cpus_per_task}", file=log)
+            print(f"[INFO]: partition for submit: {args.partition_code}", file=log)
         print("----------------------------------------------------------", file=log)
         # Submit jobs to the batch system and return job IDs, jobs is a dict, key=jobID, value=script
-        jobs = submit_jobs(args.scripts, lines=args.lines_per_task,
-                        partition_code=args.partition_code, mem=args.mem,
-                        cpus_per_task=args.cpus_per_task, log=log)
+        jobs = submit_jobs(args.scripts,
+                           read_parameters_from_script=args.read_parameters_from_script,
+                           lines=args.lines_per_task,
+                           partition_code=args.partition_code, mem=args.mem,
+                           cpus_per_task=args.cpus_per_task, log=log)
 
         # Monitor the job status with a 60-second interval, return 0 if all jobs done
         error = monitor_job_status(jobs,
