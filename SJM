@@ -186,12 +186,12 @@ def submit_jobs(scripts, read_parameters_from_script=False,
                 mem = submit_parameters["mem"]
                 partition = submit_parameters["partition"]
                 cpus = submit_parameters["cpus"]
+                print(f"[PARAMETERS]: {script}: [mem: {mem}, partition: {partition}, cpus: {cpus}]", file=log)
 
             cmd = f"sbatch "
 
         # Submit jobs to the batch system
         sbatch_command = f"{cmd} -o {script}.o  -e {script}.e {script}"
-        print(f"[PARAMETERS]: {script}: [mem: {mem}, partition: {partition}, cpus: {cpus}]", file=log)
         #process = subprocess.Popen(sbatch_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         #output, error = process.communicate()
         result = subprocess.run(sbatch_command, shell=True, capture_output=True, text=True)
