@@ -310,9 +310,10 @@ def submit_and_monitor_sequential_jobs(scripts, read_parameters_from_script=True
         if job_finished[job_index-1] != 0:
             sys.exit(f"The last job {job_container[job_index-1]} has not finished, check it out")
         else:
-            print(f"The last job {job_container[job_index-1]} has finished, now run the next one")
+            if job_index > 1:
+                print(f"The last job {job_container[job_index-1]} has finished, now run the next one")
             # Submit jobs to the batch system and return job IDs, jobs is a dict, key=jobID, value=script
-            jobs = submit_jobs([src], read_parameters_from_script=True, lines=lines,
+            jobs = submit_jobs([src], read_parameters_from_script=read_parameters_from_script, lines=lines,
                                 partition_code=partition_code, mem=mem,
                                 cpus_per_task=cpus_per_task, log=log)
 
