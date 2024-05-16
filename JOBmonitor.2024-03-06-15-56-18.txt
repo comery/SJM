@@ -1,9 +1,0 @@
-[PARAMETERS]: test1.sh: [mem: 5m, partition: cpu, cpus: 1]
-[JOBS]: 1618401 => test1.sh
-----------------------------------------------------------
-[INFO 03/06/2024, 15:56:48]: Job ID 1618401 status: None in Round 0
-[INFO 03/06/2024, 15:57:38]: Job ID 1618401 status: RUNNING in Round 1
-[INFO 03/06/2024, 15:58:29]: Job ID 1618401 status: RUNNING in Round 2
-[INFO 03/06/2024, 15:59:19]: Job ID 1618401 status: RUNNING in Round 3
-[INFO 03/06/2024, 16:00:09]: Job ID 1618401 status: COMPLETED in Round 4
-[INFO {current_time}]: All job completed!
