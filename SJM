@@ -104,13 +104,14 @@ def generate_tasks(scripts, lines=0):
         subscript_dir = os.getcwd()
         return subscript_dir, scripts
     else:
-        n_script = 1
         lines_count = 0
         script_tmp = ''
         script_file_basename_list = []
         subscript_dir = str(os.getpid()) + ".submit"
         os.mkdir(subscript_dir)
         for src in scripts:
+            if os.path.exists(src) == False:
+                sys.exit(f"Can not find this script or read {src}")
             countlines_cmd = f"wc -l  {src} | cut -d ' ' -f1"
             cmd_result = subprocess.check_output(countlines_cmd,shell=True)
             total_number = int(cmd_result.decode('utf-8'))
@@ -123,12 +124,11 @@ def generate_tasks(scripts, lines=0):
                 deal_cmd = f"cp {src} {script_file_name}"
                 subprocess.run(deal_cmd, shell=True)
                 continue
-            if n_script > 99999:
-                sys.exit(f"[ERROR]: too many jobs, you got {n_script} jobs!")
+            if total_number > 99999:
+                sys.exit(f"[ERROR]: too many jobs, you got {total_number} jobs!")
             with open(src,'r') as f:
                 prefix = src.split("/")[-1].replace(".sh", "")
-                if os.path.exists(src) == False:
-                    sys.exit(f"Can not find this script or read {src}")
+                n_script = 1
                 for line in f.readlines():
                     line = line.strip()
                     if line.startswith("#"):continue
@@ -146,7 +146,7 @@ def generate_tasks(scripts, lines=0):
                         n_script += 1
                         script_tmp = ''
                 if script_tmp:
-                    subjob_index = f"{n_script: 6d}"
+                    subjob_index = f"{n_script:06d}"
                     basename = f"{prefix}_{subjob_index}.sh"
                     script_file_name = os.path.join(subscript_dir, basename)
                     script_file_basename_list.append(basename)
@@ -359,7 +359,7 @@ yangchentao at genomics.cn
         help="script file name, mulitple are allowed")
 
     parser.add_argument("-p", "--partition", default="cpu", dest="partition_code",
-                        choices=['cpu', 'fat'],
+                        choices=['cpu', 'fat', 'cpu128', 'cpu64'],
                         help="--partition for sbatch, default=cpu")
 
     parser.add_argument("-m", "--mem", default="10g", type=str, dest="mem",
